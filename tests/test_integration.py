@@ -83,7 +83,7 @@ def test_both_upstreams_fail_still_200():
     assert response.json()["partial"] is True
     assert response.json()["customer"] is None
     assert response.json()["products"] is None
-    assert len(response.json()["warnings"]) == 2
+    assert {w["provider"] for w in response.json()["warnings"]} == {"CORE", "PRODUCTS", "FX"}
 
 
 @pytest.mark.parametrize("headers", [{}, {"X-Api-Key": "wrong"}])

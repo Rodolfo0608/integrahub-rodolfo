@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException, Path, Request
+from fastapi import Depends, FastAPI, HTTPException, Path, Request
+from fastapi.security import APIKeyHeader
 from pydantic import ValidationError
 
 from app.cache import FxCache
@@ -24,6 +25,7 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+api_key_header = APIKeyHeader(name="X-Api-Key", auto_error=False)
 
 
 def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
@@ -35,7 +37,10 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
                                     limits=httpx.Limits(max_connections=100, max_keepalive_connections=20)) as client:
             app.state.upstreams = Upstreams(client, app.state.settings)
             app.state.fx_cache = FxCache(app.state.settings.fx_ttl_seconds)
-            yield
+            try:
+                yield
+            finally:
+                await app.state.fx_cache.aclose()
 
     app = FastAPI(title="IntegraHub", version="1.0.0", lifespan=lifespan,
                   description="Perfil canónico, integración concurrente y degradación por proveedor.")
@@ -52,7 +57,7 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
             "status": response.status_code, "latencyMs": round((time.perf_counter()-started)*1000, 2)}))
         return response
 
-    async def authenticate(request: Request, x_api_key: Annotated[str | None, Header()] = None):
+    async def authenticate(request: Request, x_api_key: Annotated[str | None, Depends(api_key_header)] = None):
         if x_api_key is None or not hmac.compare_digest(
                 x_api_key.encode(), request.app.state.settings.api_key.encode()):
             raise HTTPException(status_code=401, detail="Missing or invalid API key")
@@ -82,13 +87,53 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
                                         message="Respuesta incompatible con el contrato esperado."))
             return None
 
-        customer, products = await asyncio.gather(
+        async def fetch_fx():
+            try:
+                return await request.app.state.fx_cache.get(lambda: upstreams.get("FX", config.fx_url, rid))
+            except UpstreamError as exc:
+                warnings.append(Warning(provider="FX", code=exc.code,
+                                        message="Tasas no disponibles; se conservan importes USD."))
+            except (ValidationError, ValueError, ArithmeticError):
+                upstreams.states["FX"] = "invalid_response"
+                logger.warning(json.dumps({"event": "mapping", "provider": "FX",
+                                           "requestId": rid, "result": "INVALID_RESPONSE"}))
+                warnings.append(Warning(provider="FX", code="INVALID_RESPONSE",
+                                        message="Tasas incompatibles; se conservan importes USD."))
+            return None
+
+        async def fetch_unstable():
+            if config.unstable_url:
+                try:
+                    await upstreams.get("UNSTABLE", config.unstable_url, rid, json_body=False)
+                except UpstreamError as exc:
+                    warnings.append(Warning(provider="UNSTABLE", code=exc.code,
+                                            message="Proveedor de demostración no disponible."))
+
+        customer, products, rates, _ = await asyncio.gather(
             fetch_and_map("CORE", config.core_url.replace("{id}", str(customer_id)), map_customer),
             fetch_and_map("PRODUCTS", config.products_url.replace("{id}", str(customer_id)), map_products),
+            fetch_fx(), fetch_unstable(),
         )
+        fx = None
+        if rates is not None and products is not None:
+            try:
+                fx = map_fx(rates, products.netTotalUsd)
+            except (ValidationError, ValueError, ArithmeticError):
+                warnings.append(Warning(provider="FX", code="INVALID_RESPONSE",
+                                        message="No fue posible convertir los importes USD."))
         warnings.sort(key=lambda w: (w.provider, w.code))
         return Profile(customerId=customer_id, customer=customer, products=products,
-                       fx=None, partial=bool(warnings), warnings=warnings, requestId=rid)
+                       fx=fx, partial=bool(warnings), warnings=warnings, requestId=rid)
+
+    @app.get("/health", dependencies=[Depends(authenticate)])
+    async def health(request: Request):
+        states = dict(request.app.state.upstreams.states)
+        status = ("degraded" if any(s in ("down", "invalid_response") for s in states.values())
+                  else "unknown" if "unknown" in states.values() else "ok")
+        cache = request.app.state.fx_cache
+        return {"status": status, "dependencies": states,
+                "observation": "last_call_in_this_process; not an active probe",
+                "fxCacheFresh": cache.value is not None and time.monotonic() < cache.expires_at}
 
     return app
 

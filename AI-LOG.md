@@ -25,7 +25,13 @@ Lista explícita de campos: identidad, nombre, correo, teléfono y dirección; p
 
 ## Correcciones y revisión del output
 
-Pendiente de completar con los errores realmente encontrados y sus pruebas. No se inventará una intervención manual del candidato ni una corrección inexistente para satisfacer este apartado.
+La primera implementación de `FxCache.get()` conservaba `inflight` si el único cliente cancelaba la espera antes de que terminara la carga. La carga seguía protegida con `asyncio.shield`; al vencer el TTL, una consulta podía reutilizar esa tarea terminada y devolver una tasa vencida una vez. La IA identificó el riesgo en revisión y creó `test_cancelled_waiter_must_not_reuse_expired_task`: falló realmente (`calls == 1`, esperado `2`).
+
+Se pidió al candidato revisar la política: «Revisión breve para tu AI-LOG: detecté un riesgo en la caché que generé. Si el cliente cancela la solicitud durante una carga FX, puede quedar una tarea terminada y reutilizarse una vez después de vencer el TTL. Voy a demostrarlo con una prueba. ¿Estás de acuerdo en rechazar esa reutilización y exigir una carga nueva al vencer el TTL?».
+
+El candidato respondió exactamente: «Sí, exigir recarga al vencer TTL». Se corrigió para no reutilizar tareas terminadas y limpiar el estado al completarse la carga, incluso sin consumidores. La corrección fue implementada por la IA; la detección fue de la IA y la decisión de rechazar el comportamiento y exigir la recarga fue explícitamente del candidato. No se atribuye al candidato haber escrito el arreglo ni haber descubierto el fallo.
+
+Otra prueba necesitó actualización al conectar FX: el escenario que hacía fallar todos los proveedores ahora debe esperar tres advertencias, no dos. Se cambió la aserción a los nombres concretos de los tres proveedores.
 
 ## Estimación honesta
 
