@@ -49,6 +49,6 @@ Se ejecutaron 47 pruebas deterministas con proveedores simulados, con éxito; `p
 
 Se comprobó HTTP real contra Uvicorn: 200 completo, 401 sin API key y estados por dependencia. También se ejecutaron pruebas de la aplicación ASGI con llamadas HTTP reales a los proveedores, en flujo normal, httpbin 500 y httpbin delay/6; el último produjo TIMEOUT en unos 3.12 s conservando datos. La verificación detallada está en VERIFICATION.md. No se usaron stubs como sustituto de proveedores en el modo normal.
 
-No se comprobó GitHub Actions antes de publicar. El primer push desde el entorno aislado falló al ejecutar el gestor de credenciales de Git; se preparó la publicación desde PowerShell normal del candidato. No se enviaron correos ni se accedió a tokens o contraseñas.
+El primer push desde el entorno aislado falló al ejecutar el gestor de credenciales de Git. El candidato ejecutó el push desde PowerShell normal y conservó todo el historial. Se comprobó que el repositorio es público, que main remota coincidía con `07a1109` y que GitHub Actions concluyó con success para ese commit: https://github.com/Rodolfo0608/integrahub-rodolfo/actions/runs/41214719648 . Este cierre documental se añade después de esa comprobación. No se enviaron correos ni se accedió a tokens o contraseñas.
 
 No se usó Claude Code, por lo que no corresponde CLAUDE.md.

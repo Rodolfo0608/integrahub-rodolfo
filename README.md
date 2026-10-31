@@ -156,6 +156,6 @@ En Linux/macOS sustituye el ejecutable por `.venv/bin/python`. Los tests usan `h
 - Validar el contrato detecta campos requeridos ausentes o tipos inválidos en la llamada; no hay alertas proactivas por cambios upstream, métricas exportadas ni trazas distribuidas.
 - HTTP local se limita a loopback. TLS, rotación de claves, permisos por cliente y gestión corporativa de secretos corresponden a un despliegue posterior.
 - Los tests actuales emiten una advertencia de deprecación de Starlette por el uso de `httpx` en su TestClient. Pasan con las versiones fijadas; una migración futura a `httpx2` requeriría verificar el transporte de pruebas.
-- No se ha realizado una prueba de carga ni un despliegue productivo. El workflow CI solo puede declararse validado después de ejecutarse en GitHub.
+- No se ha realizado una prueba de carga ni un despliegue productivo. El workflow CI se ejecutó con éxito para `07a1109` en Ubuntu/Python 3.12: [ejecución verificada](https://github.com/Rodolfo0608/integrahub-rodolfo/actions/runs/41214719648).
 
 Ver `STATUS.md` para evidencia y `AI-LOG.md` para participación de IA y correcciones reales.

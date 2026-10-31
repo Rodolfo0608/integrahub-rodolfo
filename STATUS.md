@@ -18,8 +18,8 @@ Inicio declarado: **31 de octubre de 2026, 09:54, Panamá (UTC-5)**. Límite de 
 | P2: circuit breaker INESTABLE | Hecho | Abre tras 3 llamadas lógicas fallidas; cooldown 30 s; una prueba half-open. Tests de apertura, rechazo, recuperación y cancelación de la prueba. |
 | P2: OpenAPI | Hecho | `/openapi.json` y `/docs` generados por FastAPI, modelo de respuesta y esquema API key; comprobados en tests. |
 | README, AI-LOG, .env.example | Hecho | Instrucciones Windows/Linux, contrato, decisiones, limitaciones, prompts y corrección real de código de IA. |
-| Repositorio público con historial progresivo | Parcial | Repositorio creado por el candidato y remoto configurado. Historial local real listo. Falta subir con `git push -u origin main` desde PowerShell normal: el entorno aislado impidió abrir el gestor de credenciales. Verificar publicación antes de entregar. |
-| CI en GitHub | Parcial | Workflow incluido. Falta ejecutar en GitHub después de subir y comprobar el resultado. Las pruebas locales sí se ejecutaron. |
+| Repositorio público con historial progresivo | Hecho | El candidato ejecutó el push desde PowerShell normal. Publicación comprobada: la rama main remota coincidió con `07a1109`; conserva los cinco commits progresivos y el esqueleto temprano. |
+| CI en GitHub | Hecho | GitHub Actions terminó con success para `07a1109` en Ubuntu/Python 3.12. [Ejecución verificada](https://github.com/Rodolfo0608/integrahub-rodolfo/actions/runs/41214719648). Los cambios posteriores de cierre son de documentación; su nueva ejecución debe comprobarse al publicar. |
 
 ## Evidencia de ejecución
 

@@ -36,6 +36,12 @@ En status/500 se observaron dos intentos con estado 500. En delay/6 se observaro
 
 Estas son comprobaciones puntuales de integración, no un benchmark ni una prueba de carga. `/health` indica última observación; no comprueba activamente cada proveedor al consultarlo.
 
+## GitHub
+
+Repositorio público y rama main comprobados mediante Git y la API pública de GitHub. CI en Ubuntu/Python 3.12: **completed / success** para `07a1109b18930ab0203a834cb924ca3087c38076`. [Ver ejecución](https://github.com/Rodolfo0608/integrahub-rodolfo/actions/runs/41214719648).
+
+La publicación la ejecutó el candidato desde PowerShell normal porque el entorno aislado no pudo invocar el gestor de credenciales. No se accedió a sus contraseñas ni tokens.
+
 ## Repetir
 
 1. Instalar y arrancar según README.
