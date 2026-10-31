@@ -35,13 +35,20 @@ Otra prueba necesitó actualización al conectar FX: el escenario que hacía fal
 
 ## Estimación honesta
 
-Estimación preliminar: prácticamente todo el código fue generado por IA; el candidato aportó objetivos, información del entorno y decisiones de stack. La revisión final del candidato debe registrarse solo si realmente se realiza.
+Estimación al cierre de implementación: **100% del código fue generado o corregido por IA; 0% escrito manualmente por el candidato**. El candidato aportó objetivos, información del entorno y decisiones de stack; rechazó explícitamente la reutilización de una tasa vencida en el caso de cancelación. Esto distingue autoría de código y participación en decisiones. La revisión final del candidato debe registrarse solo si realmente se realiza.
 
 ## Fortalezas y fallos observados
 
 - Acierto: detectó que el examen permite IA y que la prioridad obligatoria es un endpoint operativo con commit temprano.
 - Error: intentó abrir el PDF con `pymupdf`, que no estaba instalado; se corrigió usando `pypdf`, disponible en el runtime. Esto es un error de herramienta, no se cuenta como la corrección de código de integración exigida.
+- Error de código de integración: la primera caché tenía el fallo de cancelación/expiración documentado arriba. Una prueba falló antes del arreglo y pasó después. No se considera aceptable una caché solo porque funciona en el camino normal.
 
 ## Verificación y alcance
 
-En progreso. Los resultados definitivos se registrarán después de ejecutar las pruebas, sin atribuir éxito a comprobaciones pendientes.
+Se ejecutaron 47 pruebas deterministas con proveedores simulados, con éxito; `pip check` no encontró incompatibilidades. Se repitieron después de crear un entorno limpio con el script de arranque. Advertencia de deprecación TestClient/httpx declarada en README y STATUS.
+
+Se comprobó HTTP real contra Uvicorn: 200 completo, 401 sin API key y estados por dependencia. También se ejecutaron pruebas de la aplicación ASGI con llamadas HTTP reales a los proveedores, en flujo normal, httpbin 500 y httpbin delay/6; el último produjo TIMEOUT en unos 3.12 s conservando datos. La verificación detallada está en VERIFICATION.md. No se usaron stubs como sustituto de proveedores en el modo normal.
+
+No se comprobó GitHub Actions antes de publicar. El primer push desde el entorno aislado falló al ejecutar el gestor de credenciales de Git; se preparó la publicación desde PowerShell normal del candidato. No se enviaron correos ni se accedió a tokens o contraseñas.
+
+No se usó Claude Code, por lo que no corresponde CLAUDE.md.
