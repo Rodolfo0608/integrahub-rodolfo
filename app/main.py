@@ -14,6 +14,7 @@ from fastapi.security import APIKeyHeader
 from pydantic import ValidationError
 
 from app.cache import FxCache
+from app.breaker import CircuitBreaker
 from app.config import Settings
 from app.mapping import map_customer, map_fx, map_products
 from app.models import Profile, Warning
@@ -37,6 +38,7 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
                                     limits=httpx.Limits(max_connections=100, max_keepalive_connections=20)) as client:
             app.state.upstreams = Upstreams(client, app.state.settings)
             app.state.fx_cache = FxCache(app.state.settings.fx_ttl_seconds)
+            app.state.unstable_breaker = CircuitBreaker()
             try:
                 yield
             finally:
@@ -104,8 +106,12 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
         async def fetch_unstable():
             if config.unstable_url:
                 try:
-                    await upstreams.get("UNSTABLE", config.unstable_url, rid, json_body=False)
+                    await request.app.state.unstable_breaker.call(
+                        lambda: upstreams.get("UNSTABLE", config.unstable_url, rid, json_body=False))
                 except UpstreamError as exc:
+                    if exc.code == "CIRCUIT_OPEN":
+                        logger.info(json.dumps({"event": "circuit", "provider": "UNSTABLE",
+                                               "requestId": rid, "result": "CIRCUIT_OPEN"}))
                     warnings.append(Warning(provider="UNSTABLE", code=exc.code,
                                             message="Proveedor de demostración no disponible."))
 
@@ -133,7 +139,8 @@ def create_app(settings: Settings | None = None, transport=None) -> FastAPI:
         cache = request.app.state.fx_cache
         return {"status": status, "dependencies": states,
                 "observation": "last_call_in_this_process; not an active probe",
-                "fxCacheFresh": cache.value is not None and time.monotonic() < cache.expires_at}
+                "fxCacheFresh": cache.value is not None and time.monotonic() < cache.expires_at,
+                "unstableCircuit": request.app.state.unstable_breaker.state if request.app.state.settings.unstable_url else "disabled"}
 
     return app
 
